@@ -27,22 +27,25 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run Collector
+      - name: Run Collector Script
         run: python collector.py
 
-      - name: Commit & Push
+      - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Добавляем безопасный pull + rebase
-          git pull --rebase origin main
+          # Добавляем все изменения
+          git add subs/ README.md
           
-          if git diff --quiet subs/ README.md; then
+          # Если есть изменения — коммитим
+          if git diff --staged --quiet; then
             echo "✅ Нет новых изменений"
           else
-            git add subs/ README.md
             git commit -m "Auto update: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+            
+            # Пушим с обработкой конфликтов
+            git pull --rebase origin main || true
             git push
-            echo "✅ Успешно обновлено"
+            echo "✅ Успешно обновлено и запушено"
           fi
