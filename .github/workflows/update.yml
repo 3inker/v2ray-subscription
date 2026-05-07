@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.PAT }}     # ← Важно!
+          token: ${{ secrets.PAT }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -35,11 +35,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # Добавляем безопасный pull + rebase
+          git pull --rebase origin main
+          
           if git diff --quiet subs/ README.md; then
-            echo "✅ Нет изменений"
+            echo "✅ Нет новых изменений"
           else
             git add subs/ README.md
             git commit -m "Auto update: $(date '+%Y-%m-%d %H:%M:%S UTC')"
             git push
-            echo "✅ Успешно обновлено и запушено"
+            echo "✅ Успешно обновлено"
           fi
