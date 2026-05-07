@@ -11,20 +11,17 @@ from datetime import datetime
 
 # ================= НАСТРОЙКИ =================
 TIMEOUT = 8
-DELAY = 0.12
+DELAY = 0.1
 MAX_RETRIES = 3
 # ============================================
 
 country_flags = {
-    # Европа
     "RU": "🇷🇺", "UA": "🇺🇦", "BY": "🇧🇾", "PL": "🇵🇱", "CZ": "🇨🇿", "SK": "🇸🇰",
     "DE": "🇩🇪", "FR": "🇫🇷", "GB": "🇬🇧", "IT": "🇮🇹", "ES": "🇪🇸", "NL": "🇳🇱",
     "BE": "🇧🇪", "AT": "🇦🇹", "CH": "🇨🇭", "SE": "🇸🇪", "NO": "🇳🇴", "FI": "🇫🇮",
     "DK": "🇩🇰", "IE": "🇮🇪", "PT": "🇵🇹", "GR": "🇬🇷", "HU": "🇭🇺", "RO": "🇷🇴",
     "BG": "🇧🇬", "RS": "🇷🇸", "HR": "🇭🇷", "LT": "🇱🇹", "LV": "🇱🇻", "EE": "🇪🇪",
     "MD": "🇲🇩", "AM": "🇦🇲", "GE": "🇬🇪", "AZ": "🇦🇿", "KZ": "🇰🇿", "LU": "🇱🇺",
-    "SI": "🇸🇮", "MK": "🇲🇰", "AL": "🇦🇱", "BA": "🇧🇦", "ME": "🇲🇪",
-    # Америка и Азия
     "US": "🇺🇸", "CA": "🇨🇦", "BR": "🇧🇷", "MX": "🇲🇽", "SG": "🇸🇬", "HK": "🇭🇰",
     "JP": "🇯🇵", "KR": "🇰🇷", "TW": "🇹🇼", "IN": "🇮🇳", "TR": "🇹🇷", "AE": "🇦🇪",
     "ID": "🇮🇩", "MY": "🇲🇾", "TH": "🇹🇭", "VN": "🇻🇳", "AU": "🇦🇺", "ZA": "🇿🇦",
@@ -69,20 +66,30 @@ def clean_content(content):
     return [line.strip() for line in content.splitlines() if line.strip() and not line.startswith("#")]
 
 def get_server_address(link):
+    """Улучшенное извлечение адреса и порта"""
     try:
+        # VMess
         if link.startswith("vmess://"):
             b64 = link[8:].split("?")[0].split("#")[0]
             data = json.loads(base64.b64decode(b64 + "==").decode(errors='ignore'))
             return data.get("add") or data.get("address"), int(data.get("port", 443))
-        
-        parsed = urlparse(link)
-        addr = parsed.hostname
-        port = parsed.port or 443
-        if not addr and "@" in link:
-            addr = link.split("@")[1].split(":")[0].split("/")[0]
-        return addr, port
+
+        # VLESS, Trojan и другие
+        if "://" in link:
+            # Убираем параметры после ?
+            clean_link = link.split("?")[0]
+            parsed = urlparse(clean_link)
+            addr = parsed.hostname
+            port = parsed.port or 443
+
+            # Если hostname пустой — пытаемся вытащить из пути
+            if not addr and "@" in clean_link:
+                addr_part = clean_link.split("@")[1].split(":")[0]
+                addr = addr_part.split("/")[0]
+            return addr, port
     except:
-        return None, 443
+        pass
+    return None, 443
 
 def tcp_test(link):
     server, port = get_server_address(link)
@@ -101,14 +108,16 @@ def tcp_test(link):
 
 def get_country_and_provider(link):
     server, _ = get_server_address(link)
-    if not server or not re.match(r"^\d+\.\d+\.\d+\.\d+$", server):
+    if not server or not re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", server):
         return "Unknown", "Unknown"
+    
     try:
         r = requests.get(f"http://ip-api.com/json/{server}?fields=countryCode,org,isp", timeout=6)
         if r.status_code == 200:
             data = r.json()
             country = data.get("countryCode", "Unknown")
             provider = data.get("org") or data.get("isp") or "Unknown"
+            
             for name in ["Cloudflare", "Hetzner", "Aeza", "Contabo", "OVH", "Amazon", "Google", "Oracle"]:
                 if name.lower() in provider.lower():
                     provider = name
@@ -121,7 +130,6 @@ def get_country_and_provider(link):
     return "Unknown", "Unknown"
 
 def update_readme_stats():
-    """Обновляет README.md со статистикой по протоколам и странам"""
     subs_dir = Path("subs")
     if not subs_dir.exists():
         return
@@ -136,44 +144,44 @@ def update_readme_stats():
         "hy2": len(open(subs_dir/"hy2_all.txt").readlines()) if (subs_dir/"hy2_all.txt").exists() else 0,
     }
 
-    # Статистика по странам (для VLESS — самый популярный)
-    country_stats = defaultdict(int)
+    # Статистика по странам (только VLESS)
+    country_stats = {}
     for file in subs_dir.glob("vless_*.txt"):
-        if file.name == "vless_all.txt":
+        if file.name.endswith("_all.txt"):
             continue
-        country_code = file.name.replace("vless_", "").replace(".txt", "")
-        count = len(open(file).readlines())
-        country_stats[country_code] = count
+        country = file.stem.replace("vless_", "")
+        try:
+            count = len(open(file, encoding="utf-8").readlines())
+            country_stats[country] = count
+        except:
+            pass
 
-    # Читаем README
+    # Обновляем README
     readme_path = Path("README.md")
     if not readme_path.exists():
         return
 
     content = readme_path.read_text(encoding="utf-8")
 
-    # Обновляем общую статистику
-    content = re.sub(r"\*\*Все протоколы\*\*\s+\|\s+`.*?`", f"**Все протоколы**          | `{proto_stats['all']}`", content)
-    content = re.sub(r"\*\*VLESS All\*\*\s+\|\s+`.*?`", f"**VLESS All**              | `{proto_stats['vless']}`", content)
-    content = re.sub(r"\*\*VMess All\*\*\s+\|\s+`.*?`", f"**VMess All**              | `{proto_stats['vmess']}`", content)
-    content = re.sub(r"\*\*Trojan All\*\*\s+\|\s+`.*?`", f"**Trojan All**             | `{proto_stats['trojan']}`", content)
-    content = re.sub(r"\*\*Shadowsocks All\*\*\s+\|\s+`.*?`", f"**Shadowsocks All**        | `{proto_stats['ss']}`", content)
-    content = re.sub(r"\*\*Hysteria2 All\*\*\s+\|\s+`.*?`", f"**Hysteria2 All**          | `{proto_stats['hy2']}`", content)
+    # Обновляем статистику протоколов
+    content = re.sub(r"\*\*Все протоколы\*\*\s+\|\s+`\d+`", f"**Все протоколы**          | `{proto_stats['all']}`", content)
+    content = re.sub(r"\*\*VLESS All\*\*\s+\|\s+`\d+`", f"**VLESS All**              | `{proto_stats['vless']}`", content)
+    content = re.sub(r"\*\*VMess All\*\*\s+\|\s+`\d+`", f"**VMess All**              | `{proto_stats['vmess']}`", content)
+    content = re.sub(r"\*\*Trojan All\*\*\s+\|\s+`\d+`", f"**Trojan All**             | `{proto_stats['trojan']}`", content)
+    content = re.sub(r"\*\*Shadowsocks All\*\*\s+\|\s+`\d+`", f"**Shadowsocks All**        | `{proto_stats['ss']}`", content)
+    content = re.sub(r"\*\*Hysteria2 All\*\*\s+\|\s+`\d+`", f"**Hysteria2 All**          | `{proto_stats['hy2']}`", content)
 
-    # === Таблица по странам ===
-    country_table = "| Страна | Код | VLESS | \n|--------|-----|-------|\n"
-    for country, count in sorted(country_stats.items(), key=lambda x: x[1], reverse=True)[:15]:  # топ-15
+    # Таблица по странам
+    country_table = "| Страна | Код | VLESS |\n|--------|-----|-------|\n"
+    for country, count in sorted(country_stats.items(), key=lambda x: x[1], reverse=True)[:20]:
         flag = get_flag(country)
         country_table += f"| {flag} {country} | `{country}` | `{count}` |\n"
 
-    # Заменяем секцию таблицы по странам
-    if "Таблица по странам" in content:
-        content = re.sub(r"(### Таблица по странам\n\n)(.*?)(?=\n\n###|\n\n##)", 
-                        f"### Таблица по странам\n\n{country_table}\n", content, flags=re.DOTALL)
-    else:
-        # Добавляем новую секцию, если её нет
-        insert = f"\n### 🌍 Топ стран (VLESS)\n\n{country_table}\n"
-        content = content.replace("### Как использовать", insert + "### Как использовать")
+    content = re.sub(
+        r"(### 🌍 Топ стран \(VLESS\)\n\n)([\s\S]*?)(?=\n\n###|\n\n##)", 
+        f"### 🌍 Топ стран (VLESS)\n\n{country_table}\n", 
+        content
+    )
 
     # Дата обновления
     content = re.sub(
@@ -183,42 +191,39 @@ def update_readme_stats():
     )
 
     readme_path.write_text(content, encoding="utf-8")
-    print("✅ README.md успешно обновлён (статистика + таблица по странам)")
+    print("✅ README.md обновлён")
 
 def main():
     Path("subs").mkdir(exist_ok=True)
 
-    print("\n🔄 Собираем источники...")
+    print("🔄 Собираем источники...")
     all_links = set()
 
     sources = [line.strip() for line in Path("sources.txt").read_text(encoding="utf-8").splitlines() 
                if line.strip() and not line.startswith("#")]
 
     for item in sources:
-        print(f"→ {item[:90]}{'...' if len(item) > 90 else ''}")
-        
+        print(f"→ {item[:80]}{'...' if len(item)>80 else ''}")
         if is_proxy_link(item):
             all_links.add(item)
-            print("   ✅ Прямая ссылка")
+            print("   ✅ Добавлена своя ссылка")
         elif is_subscription_url(item):
             content = fetch_with_retry(item)
-            if not content:
-                print("   ❌ Не удалось скачать")
-                continue
-            decoded = try_decode_base64(content)
-            if decoded:
-                content = decoded
-                print("   🔓 Base64 декодировано")
-            valid = [l for l in clean_content(content) if is_proxy_link(l)]
-            all_links.update(valid)
-            print(f"   ✅ {len(valid)} ссылок")
+            if content:
+                decoded = try_decode_base64(content)
+                if decoded:
+                    content = decoded
+                valid = [l for l in clean_content(content) if is_proxy_link(l)]
+                all_links.update(valid)
+                print(f"   ✅ Найдено {len(valid)} ссылок")
 
     print(f"\n📊 Всего уникальных ссылок: {len(all_links)}")
+
     with open("subs/raw_all.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(sorted(all_links)))
 
     # Проверка
-    print("\n🧪 Проверка TCP Connect...")
+    print("🧪 Проверка серверов...")
     working = defaultdict(lambda: defaultdict(list))
 
     for i, link in enumerate(all_links):
@@ -230,48 +235,33 @@ def main():
             working[proto][(country, provider)].append((ping, link))
         time.sleep(DELAY)
 
-    # Сохранение файлов
-    total = 0
-    proto_all = defaultdict(list)
+    # Сохранение
+    for proto in ["vless", "vmess", "trojan", "ss", "hy2"]:
+        if proto in working:
+            all_links_proto = []
+            for (country, provider), items in working[proto].items():
+                items.sort(key=lambda x: x[0])
+                for num, (ping, link) in enumerate(items, 1):
+                    flag = get_flag(country)
+                    name = f"{flag} {country} ({num}) | {provider} | 🫐"
+                    new_link = link.rsplit("#", 1)[0] + "#" + name if "#" in link else link + "#" + name
+                    all_links_proto.append(new_link)
 
-    for proto in sorted(working):
-        all_proto_links = []
-        for (country, provider), items in working[proto].items():
-            items.sort(key=lambda x: x[0])
-            renamed = []
-            for num, (ping, link) in enumerate(items, 1):
-                flag = get_flag(country)
-                name = f"{flag} {country} ({num}) | {provider} | 🫐"
-                if "#" in link:
-                    base = link.rsplit("#", 1)[0]
-                    new_link = f"{base}#{name}"
-                else:
-                    new_link = f"{link}#{name}"
-                renamed.append(new_link)
-                all_proto_links.append(new_link)
-
-            if renamed:
-                with open(f"subs/{proto}_{country}.txt", "w", encoding="utf-8") as f:
-                    f.write("\n".join(renamed))
-                total += len(renamed)
-
-        if all_proto_links:
+            # Основные файлы
             with open(f"subs/{proto}_all.txt", "w", encoding="utf-8") as f:
-                f.write("\n".join(all_proto_links))
+                f.write("\n".join(all_links_proto))
             with open(f"subs/{proto}.txt", "w", encoding="utf-8") as f:
-                f.write("\n".join(all_proto_links))
-            proto_all[proto] = all_proto_links
+                f.write("\n".join(all_links_proto))
 
     # all.txt
     with open("subs/all.txt", "w", encoding="utf-8") as f:
         combined = []
         for p in ["vless", "vmess", "trojan", "ss", "hy2"]:
-            combined.extend(proto_all.get(p, []))
-        f.write("\n".join(combined))
+            if Path(f"subs/{p}_all.txt").exists():
+                combined.extend(open(f"subs/{p}_all.txt", encoding="utf-8").readlines())
+        f.write("".join(combined))
 
-    print(f"\n🎉 Готово! Рабочих найдено: {total}")
-
-    # Обновляем README.md
+    print(f"\n🎉 Готово! Рабочих: {sum(len(v) for v in working.values())}")
     update_readme_stats()
 
 if __name__ == "__main__":
