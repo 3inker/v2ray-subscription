@@ -2,8 +2,8 @@ name: Auto Update V2Ray Subscriptions
 
 on:
   schedule:
-    - cron: '0 */6 * * *'        # Каждые 6 часов
-  workflow_dispatch:             # Можно запускать вручально
+    - cron: '0 */6 * * *'     # Каждые 6 часов
+  workflow_dispatch:          # Ручной запуск
 
 jobs:
   update:
@@ -21,23 +21,21 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
+        run: pip install requests
 
       - name: Run Collector
         run: python collector.py
 
-      - name: Commit and Push changes
+      - name: Commit and Push
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          if [[ -n "$(git status --porcelain subs/)" ]]; then
-            git add subs/
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add subs/ README.md
             git commit -m "Auto update: $(date '+%Y-%m-%d %H:%M:%S UTC')"
-            git push
-            echo "✅ Changes committed and pushed"
+            git push https://${{ secrets.PAT }}@github.com/3inker/v2ray-subscription.git
+            echo "✅ Успешно обновлено"
           else
-            echo "✅ No changes to commit"
+            echo "✅ Нет изменений"
           fi
