@@ -5,55 +5,22 @@ import socket
 import json
 import base64
 from pathlib import Path
-from collections import defaultdict
 from urllib.parse import urlparse
-from datetime import datetime
 
 # ================= НАСТРОЙКИ =================
 TIMEOUT = 10
-DELAY = 0.15
+DELAY = 0.12
 MAX_RETRIES = 3
 IP_CHECK_ATTEMPTS = 2
 # ============================================
 
-def get_ip_info(server):
-    """Много API для определения страны и провайдера"""
-    apis = [
-        f"http://ip-api.com/json/{server}?fields=countryCode,org,isp",
-        f"https://ipwho.is/{server}",
-        f"https://api.ipapi.is/?q={server}",
-        f"https://api.beacondb.net/v1/ip/{server}",
-        f"https://freeipapi.com/api/json/{server}",
-        f"https://api.iplocate.io/api/lookup/{server}",
-    ]
-    
-    for api_url in apis:
-        try:
-            r = requests.get(api_url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-            if r.status_code != 200:
-                continue
-            data = r.json()
-
-            if "countryCode" in data:
-                country = data.get("countryCode")
-                provider = data.get("org") or data.get("isp") or "Unknown"
-            elif "country_code" in data:
-                country = data.get("country_code")
-                provider = data.get("isp") or data.get("connection", {}).get("isp") or "Unknown"
-            elif "country" in data:
-                country = data.get("country", {}).get("code") if isinstance(data.get("country"), dict) else data.get("country")
-                provider = data.get("isp") or data.get("org") or "Unknown"
-            else:
-                continue
-
-            if country and len(str(country)) == 2:
-                provider = str(provider).strip()[:40] or "Unknown"
-                return country.upper(), provider
-        except:
-            continue
-    
-    return "Unknown", "Unknown"
-
+def is_russian_in_name(name: str) -> bool:
+    """Определяем российский сервер по названию"""
+    if not name:
+        return False
+    text = name.upper()
+    russian_keywords = ["RU", "RUSSIA", "РОССИЯ", "РФ", "RUSSIAN", "МОСКВА", "САНКТ", "ЕКБ", "SPB", "MSK"]
+    return any(kw in text for kw in russian_keywords)
 
 def is_subscription_url(text: str) -> bool:
     return text.startswith(("http://", "https://"))
@@ -92,21 +59,21 @@ def get_server_address(link):
         return None, 443
 
 def tcp_test(link):
+    """Проверка с несколькими попытками"""
     for _ in range(IP_CHECK_ATTEMPTS):
         server, port = get_server_address(link)
         if not server:
-            return False, 9999
+            return False
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(TIMEOUT)
-            start = time.time()
             result = sock.connect_ex((server, port))
             sock.close()
             if result == 0:
-                return True, 0
+                return True
         except:
             time.sleep(0.5)
-    return False, 9999
+    return False
 
 def main():
     Path("subs").mkdir(exist_ok=True)
@@ -118,7 +85,7 @@ def main():
                if line.strip() and not line.startswith("#")]
 
     for item in sources:
-        print(f"→ {item[:85]}{'...' if len(item)>85 else ''}")
+        print(f"→ {item[:90]}{'...' if len(item)>90 else ''}")
         if is_proxy_link(item):
             all_links.add(item)
         elif is_subscription_url(item):
@@ -130,55 +97,33 @@ def main():
 
     print(f"\n📊 Всего уникальных ссылок: {len(all_links)}")
 
-    # Проверка
     print("🧪 Проверка серверов...")
-    working = defaultdict(list)   # country -> list of (link, provider)
+    ru_links = []
+    not_ru_links = []
 
     for i, link in enumerate(all_links):
         print(f"[{i+1}/{len(all_links)}] Проверка...", end="\r")
         
-        ok, _ = tcp_test(link)
-        if ok:
-            server, _ = get_server_address(link)
-            country, provider = get_ip_info(server) if server else ("Unknown", "Unknown")
-            working[country].append((link, provider))
-        
-        time.sleep(DELAY)
+        if tcp_test(link):
+            # Берём оригинальное название (после #)
+            name_part = link.split("#")[-1] if "#" in link else ""
+            
+            if is_russian_in_name(name_part):
+                ru_links.append(link)
+            else:
+                not_ru_links.append(link)
 
-    # Сортировка по стране (алфавит)
-    ru_links = []
-    not_ru_links = []
-
-    # Обработка RU
-    if "RU" in working:
-        items = working.pop("RU")
-        for num, (link, provider) in enumerate(items, 1):
-            name = f"🇷🇺 Russia [{num}] | {provider}"
-            new_link = link.rsplit("#", 1)[0] + f"#{name}" if "#" in link else f"{link}#{name}"
-            ru_links.append(new_link)
-
-    # Обработка остальных стран (сортировка по алфавиту)
-    for country in sorted(working.keys()):   # <-- Сортировка по алфавиту
-        items = working[country]
-        for num, (link, provider) in enumerate(items, 1):
-            flag = "🇷🇺" if country == "RU" else "🌍"
-            country_name = "Russia" if country == "RU" else country
-            name = f"{flag} {country_name} [{num}] | {provider}"
-            new_link = link.rsplit("#", 1)[0] + f"#{name}" if "#" in link else f"{link}#{name}"
-            not_ru_links.append(new_link)
-
-    # Сохранение
+    # Сохраняем без изменения названий
     with open("subs/all_ru.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(ru_links))
     
     with open("subs/all_not_ru.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(not_ru_links))
 
-    total = len(ru_links) + len(not_ru_links)
     print(f"\n🎉 Готово!")
-    print(f"   🇷🇺 RU: {len(ru_links)}")
-    print(f"   🌍 Не RU: {len(not_ru_links)}")
-    print(f"   Всего: {total}")
+    print(f"   🇷🇺 all_ru.txt     → {len(ru_links)} серверов")
+    print(f"   🌍 all_not_ru.txt → {len(not_ru_links)} серверов")
+    print(f"   Всего рабочих: {len(ru_links) + len(not_ru_links)}")
 
 if __name__ == "__main__":
     main()
