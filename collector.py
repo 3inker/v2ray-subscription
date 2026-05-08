@@ -14,13 +14,48 @@ MAX_RETRIES = 3
 IP_CHECK_ATTEMPTS = 2
 # ============================================
 
-def is_russian_in_name(name: str) -> bool:
-    """Определяем российский сервер по названию"""
+def is_russian_server(name: str) -> bool:
+    """Точная проверка по целым словам"""
     if not name:
         return False
+    
+    # Приводим к верхнему регистру
     text = name.upper()
-    russian_keywords = ["RU", "RUSSIA", "РОССИЯ", "РФ", "RUSSIAN", "МОСКВА", "САНКТ", "ЕКБ", "SPB", "MSK"]
-    return any(kw in text for kw in russian_keywords)
+    
+    # Список точных русских индикаторов (ищем как отдельные слова)
+    ru_patterns = [
+        r'\bRU\b',           # RU как отдельное слово
+        r'\bRUSSIA\b',
+        r'\bРОССИЯ\b',
+        r'\bРФ\b',
+        r'\bRUSSIAN\b',
+        r'\bМОСКВА\b',
+        r'\bПИТЕР\b',
+        r'\bSPB\b',
+        r'\bMSK\b',
+        r'\bЕКБ\b',
+    ]
+    
+    # Исключаем ложные срабатывания
+    exclude_patterns = [
+        r'\bUNBLOCKRU\b',
+        r'\bYOUTUBEUNBLOCKRU\b',
+        r'\bTG:\s*@',
+        r'\bTELEGRAM\b',
+    ]
+    
+    # Сначала проверяем исключения
+    for pattern in exclude_patterns:
+        if re.search(pattern, text):
+            return False
+    
+    # Проверяем наличие русских индикаторов как отдельных слов
+    for pattern in ru_patterns:
+        if re.search(pattern, text):
+            return True
+    
+    return False
+
 
 def is_subscription_url(text: str) -> bool:
     return text.startswith(("http://", "https://"))
@@ -59,7 +94,6 @@ def get_server_address(link):
         return None, 443
 
 def tcp_test(link):
-    """Проверка с несколькими попытками"""
     for _ in range(IP_CHECK_ATTEMPTS):
         server, port = get_server_address(link)
         if not server:
@@ -105,15 +139,13 @@ def main():
         print(f"[{i+1}/{len(all_links)}] Проверка...", end="\r")
         
         if tcp_test(link):
-            # Берём оригинальное название (после #)
-            name_part = link.split("#")[-1] if "#" in link else ""
+            name_part = link.split("#")[-1] if "#" in link else link
             
-            if is_russian_in_name(name_part):
+            if is_russian_server(name_part):
                 ru_links.append(link)
             else:
                 not_ru_links.append(link)
 
-    # Сохраняем без изменения названий
     with open("subs/all_ru.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(ru_links))
     
@@ -123,7 +155,6 @@ def main():
     print(f"\n🎉 Готово!")
     print(f"   🇷🇺 all_ru.txt     → {len(ru_links)} серверов")
     print(f"   🌍 all_not_ru.txt → {len(not_ru_links)} серверов")
-    print(f"   Всего рабочих: {len(ru_links) + len(not_ru_links)}")
 
 if __name__ == "__main__":
     main()
