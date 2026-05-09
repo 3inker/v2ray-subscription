@@ -2,9 +2,14 @@ vless://0b25efd8-70cb-4f19-90fd-f310f510e353@34.185.168.157:443?encryption=none&
 vless://48adc4f4-a87a-42a3-9e44-a7d2a2e8a8a0@34.88.175.133:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.google.com&fp=chrome&pbk=8JauO_TQdrfLm_kGBZ8nENkPZhG3V26JCaJ6oPEVP2Q&sid=8644ce8d&packetEncoding=xudp#vpn-finland
 vless://813e1f2b-72db-4737-b401-fae11216483f@35.228.174.227:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.google.com&fp=chrome&pbk=YLeedGwgKg8HO0lx_7EuPU1vsMhVExn5SDhWSyNlcEg&sid=176e07bf&packetEncoding=xudp#vpn-kids
 vless://c7b2a6d3-0ec3-48e6-af91-46c0d68a9f72@35.228.179.144:443?encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.google.com&fp=chrome&pbk=5CRCZsS_GjhGaClxUfqJNbqTEoro1TRTcJsNQRRZaBw&sid=f5033cdb&packetEncoding=xudp#vpn-tonia
+
 https://mifa.world/vless
+https://mifa.world/hysteria
+
 https://gist.github.com/flaafix/c79a81037d15163360571c7a7331b153/raw/801ada3d16456b2be86b950461359da04c59b26a/AetrisVPN.txt
 https://gitverse.ru/api/repos/flaafix/AetrisVPN/raw/branch/master/AetrisVPN.txt
+
 https://github.com/ArtemAfonasyev/hentai-goida-subscription/raw/refs/heads/main/subscription.txt
 https://github.com/ArtemAfonasyev/hentai-goida-subscription/raw/refs/heads/main/subscription-ru.txt
+
 https://github.com/EtoNeYaProject/EtoNeYaProject.github.io/raw/refs/heads/main/whitelist
