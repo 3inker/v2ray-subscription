@@ -4,6 +4,7 @@ import time
 import socket
 import json
 import base64
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
@@ -108,6 +109,44 @@ def tcp_test(link):
             time.sleep(0.5)
     return False
 
+def update_readme(ru_count: int, not_ru_count: int):
+    """Обновляет статистику и дату в README.md"""
+    readme_path = Path("README.md")
+    if not readme_path.exists():
+        print("⚠️  README.md не найден, пропускаем обновление")
+        return
+
+    total = ru_count + not_ru_count
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    text = readme_path.read_text(encoding="utf-8")
+
+    # Обновляем строки таблицы со счётчиками
+    text = re.sub(
+        r'(\|\s*\*\*Все RU\*\*\s*\|\s*)`\d+`',
+        rf'\1`{ru_count}`',
+        text
+    )
+    text = re.sub(
+        r'(\|\s*\*\*Все не RU\*\*\s*\|\s*)`\d+`',
+        rf'\1`{not_ru_count}`',
+        text
+    )
+    text = re.sub(
+        r'(\|\s*\*\*Всего рабочих\*\*\s*\|\s*)`\d+`',
+        rf'\1`{total}`',
+        text
+    )
+
+    # Обновляем дату последнего обновления
+    text = re.sub(
+        r'\*Последнее обновление:.*?\*',
+        f'*Последнее обновление: {now}*',
+        text
+    )
+
+    readme_path.write_text(text, encoding="utf-8")
+    print(f"📝 README.md обновлён: RU={ru_count}, не RU={not_ru_count}, всего={total}, дата={now}")
+
 def main():
     Path("subs").mkdir(exist_ok=True)
 
@@ -155,6 +194,8 @@ def main():
     print(f"\n🎉 Готово!")
     print(f"  🇷🇺 all_ru.txt → {len(ru_links)} серверов")
     print(f"  🌍 all_not_ru.txt → {len(not_ru_links)} серверов")
+
+    update_readme(len(ru_links), len(not_ru_links))
 
 if __name__ == "__main__":
     main()
