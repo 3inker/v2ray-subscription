@@ -14,3 +14,6 @@ https://github.com/ArtemAfonasyev/hentai-goida-subscription/raw/refs/heads/main/
 
 https://raw.githubusercontent.com/Maskkost93/kizyak-vpn-4.0/refs/heads/main/kizyakbeta6.txt
 https://raw.githubusercontent.com/Maskkost93/kizyak-vpn-4.0/refs/heads/main/kizyakbeta7.txt
+
+vless://3275a667-4a67-4d43-b0ba-54da2d1145dd@us.gryaz-vpn.com:19131?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=yxRy8t-W5pCOglMeGNTeen8vQPK1SG0sM49vL6GLpjo&security=reality&sid=0a8a84dcb5&sni=cloudflare.com&type=tcp#Gryaz%20-%20%F0%9F%87%BA%F0%9F%87%B8%20%D0%A1%D0%A8%D0%90
+vless://40bf709c-4353-4552-ba26-406d2bf7821d@fr.gryaz-vpn.com:20567?encryption=none&flow=xtls-rprx-vision&fp=chrome&pbk=1WOtQYIQ-3sJtbrhSA1LW6gAnO-wG0Z5aCnlL_zoiXQ&security=reality&sid=b82d7208fe23&sni=cloudflare.com&type=tcp#Gryaz%20-%20%F0%9F%A5%90%20%D0%A4%D1%80%D0%B0%D0%BD%D1%86%D0%B8%D1%8F
