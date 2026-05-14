@@ -1,7 +1,12 @@
 https://mifa.world/vless
 https://mifa.world/hysteria
+https://mifa.world/ss
+https://mifa.world/trojan
+https://mifa.world/vmess
+https://mifa.world/other
 
 https://gist.github.com/flaafix/c79a81037d15163360571c7a7331b153/raw/801ada3d16456b2be86b950461359da04c59b26a/AetrisVPN.txt
+https://gist.githubusercontent.com/flaafix/c79a81037d15163360571c7a7331b153/raw/801ada3d16456b2be86b950461359da04c59b26a/AetrisVPN.txt
 https://gitverse.ru/api/repos/flaafix/AetrisVPN/raw/branch/master/AetrisVPN.txt
 
 https://github.com/ArtemAfonasyev/hentai-goida-subscription/raw/refs/heads/main/subscription.txt
