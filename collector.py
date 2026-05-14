@@ -15,16 +15,22 @@ IP_CHECK_ATTEMPTS = 2
 # ============================================
 
 def dedup_key(link: str) -> str:
-    """Ключ для дедупликации: протокол + адрес без fragment (#name)"""
-    if link.startswith("vmess://"):
-        try:
+    """Ключ: протокол + uuid + host + port (без query и #name)"""
+    try:
+        if link.startswith("vmess://"):
             b64 = link[8:].split("?")[0].split("#")[0]
             data = json.loads(base64.b64decode(b64 + "==").decode(errors='ignore'))
-            key_data = {k: v for k, v in data.items() if k not in ("ps", "remark")}
-            return "vmess://" + json.dumps(key_data, sort_keys=True)
-        except:
-            pass
-    return link.split("#")[0]
+            host = data.get("add") or data.get("address", "")
+            port = data.get("port", "")
+            uid  = data.get("id", "")
+            return f"vmess://{uid}@{host}:{port}"
+
+        # vless://uuid@host:port?query#name  →  vless://uuid@host:port
+        proto = link.split("://")[0]
+        body  = link.split("://")[1].split("?")[0].split("#")[0]
+        return f"{proto}://{body}"
+    except:
+        return link.split("#")[0]
 
 def is_russian_server(name: str) -> bool:
     """Точная проверка по целым словам"""
@@ -126,14 +132,22 @@ def main():
         elif is_subscription_url(item):
             content = fetch_with_retry(item)
             if content:
-                valid = [l for l in clean_content(content) if is_proxy_link(l)]
+                # Попытка base64-декода если нет явных ссылок
+                lines = clean_content(content)
+                valid = [l for l in lines if is_proxy_link(l)]
+                if not valid:
+                    try:
+                        decoded = base64.b64decode(content.strip() + "==").decode(errors='ignore')
+                        valid = [l.strip() for l in decoded.splitlines() if is_proxy_link(l.strip())]
+                    except:
+                        pass
                 added = 0
                 for l in valid:
                     key = dedup_key(l)
                     if key not in all_links:
                         all_links[key] = l
                         added += 1
-                print(f"  ✅ {added} новых ссылок (из {len(valid)} полученных)")
+                print(f"  ✅ {added} новых (из {len(valid)} получено, {len(valid)-added} дублей)")
 
     print(f"\n📊 Всего уникальных ссылок: {len(all_links)}")
     print("🧪 Проверка серверов...")
