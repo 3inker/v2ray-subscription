@@ -15,10 +15,26 @@ MAX_RETRIES = 3
 IP_CHECK_ATTEMPTS = 2
 # ============================================
 
+def dedup_key(link: str) -> str:
+    """Ключ: proto + uuid + host + port (без query и #name) — как в vpn-клиентах"""
+    try:
+        if link.startswith("vmess://"):
+            b64 = link[8:].split("?")[0].split("#")[0]
+            data = json.loads(base64.b64decode(b64 + "==").decode(errors='ignore'))
+            host = data.get("add") or data.get("address", "")
+            port = str(data.get("port", ""))
+            uid  = data.get("id", "")
+            return f"vmess://{uid}@{host}:{port}"
+        # vless://uuid@host:port?query#name → vless://uuid@host:port
+        proto = link.split("://")[0]
+        body  = link.split("://")[1].split("?")[0].split("#")[0]
+        return f"{proto}://{body}"
+    except:
+        return link
+
 def try_decode_base64(content: str) -> str:
     """Пробует декодировать base64, если контент на него похож"""
     stripped = content.strip()
-    # base64 не содержит :// и состоит только из допустимых символов
     if "://" not in stripped and re.match(r'^[A-Za-z0-9+/=\s]+$', stripped):
         try:
             decoded = base64.b64decode(stripped + "==").decode("utf-8", errors="ignore")
@@ -33,14 +49,11 @@ def is_russian_server(name: str) -> bool:
     if not name:
         return False
 
-    # Убираем часть с Telegram-каналом — она не описывает регион сервера
     name = re.sub(r'TG:\s*@\S+', '', name, flags=re.IGNORECASE)
-
-    # Декодируем URL-encoding (%D0%9C... → Москва) и приводим к верхнему регистру
     text = unquote(name).upper()
 
     ru_patterns = [
-        r'\bRU\b',        # RU как отдельное слово
+        r'\bRU\b',
         r'\bRUSSIA\b',
         r'\bРОССИЯ\b',
         r'\bРФ\b',
@@ -120,7 +133,6 @@ def update_readme(ru_count: int, not_ru_count: int):
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     text = readme_path.read_text(encoding="utf-8")
 
-    # Обновляем строки таблицы со счётчиками
     text = re.sub(
         r'(\|\s*\*\*Все RU\*\*\s*\|\s*)`\d+`',
         rf'\1`{ru_count}`',
@@ -137,7 +149,6 @@ def update_readme(ru_count: int, not_ru_count: int):
         text
     )
 
-    # Обновляем дату последнего обновления
     text = re.sub(
         r'\*Последнее обновление:.*?\*',
         f'*Последнее обновление: {now}*',
@@ -162,22 +173,28 @@ def main():
         elif is_subscription_url(item):
             content = fetch_with_retry(item)
             if content:
-                content = try_decode_base64(content)  # декодируем base64 если нужно
+                content = try_decode_base64(content)
                 valid = [l for l in clean_content(content) if is_proxy_link(l)]
                 all_links.update(valid)
                 print(f"  ✅ {len(valid)} ссылок")
 
-    print(f"\n📊 Всего уникальных ссылок: {len(all_links)}")
+    # Дедупликация по uuid+host+port (как кнопка "удалить дубликаты" в vpn-клиенте)
+    seen_keys = {}
+    for link in all_links:
+        key = dedup_key(link)
+        if key not in seen_keys:
+            seen_keys[key] = link
+    unique_links = list(seen_keys.values())
+    print(f"\n📊 Собрано: {len(all_links)} | После дедупликации: {len(unique_links)}")
+
     print("🧪 Проверка серверов...")
 
     ru_links = []
     not_ru_links = []
 
-    for i, link in enumerate(all_links):
-        print(f"[{i+1}/{len(all_links)}] Проверка...", end="\r")
+    for i, link in enumerate(unique_links):
+        print(f"[{i+1}/{len(unique_links)}] Проверка...", end="\r")
         if tcp_test(link):
-            # если # нет — передаём пустую строку, а не всю ссылку
-            # unquote декодирует URL-encoding (%D0%9C... → Москва)
             name_part = unquote(link.split("#")[-1]) if "#" in link else ""
             if is_russian_server(name_part):
                 ru_links.append(link)
