@@ -194,7 +194,7 @@ def main():
     print(f"  🇷🇺 all_ru.txt → {len(ru_links)} серверов")
     print(f"  🌍 all_not_ru.txt → {len(not_ru_links)} серверов")
 
-    update_readme(len(ru_links), len(not_ru_count))
+    update_readme(len(ru_links), len(not_ru_links))
 
 if __name__ == "__main__":
     main()
