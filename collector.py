@@ -129,17 +129,20 @@ def tcp_test(link):
     return False
 
 def get_profile_name(link: str) -> str:
-    """Извлекает только название профиля (fragment после #) с декодированием"""
-    try:
-        parsed = urlparse(link)
-        name = parsed.fragment
-        if name:
-            return unquote(name)
-    except:
-        pass
-    if "#" in link:
-        return unquote(link.split("#", 1)[-1])
-    return ""
+    """Извлекает только название профиля с декодированием"""
+    # Для vmess в base64 формате — название в поле "ps"
+    if link.startswith("vmess://"):
+        try:
+            b64 = link[8:]
+            data = json.loads(base64.b64decode(b64 + "==").decode(errors='ignore'))
+            return data.get("ps", "")
+        except:
+            pass
+    
+    # Для всех остальных (vless, trojan, ss) — берём fragment после #
+    if "#" not in link:
+        return ""
+    return unquote(link.split("#", 1)[-1])
 
 def update_readme(ru_count: int, not_ru_count: int):
     """Обновляет статистику и дату в README.md"""
