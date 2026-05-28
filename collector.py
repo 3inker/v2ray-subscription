@@ -4,6 +4,7 @@ import time
 import socket
 import json
 import base64
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse, unquote
@@ -25,7 +26,6 @@ def dedup_key(link: str) -> str:
             port = str(data.get("port", ""))
             uid  = data.get("id", "")
             return f"vmess://{uid}@{host}:{port}"
-        # vless://uuid@host:port?query#name → vless://uuid@host:port
         proto = link.split("://")[0]
         body  = link.split("://")[1].split("?")[0].split("#")[0]
         return f"{proto}://{body}"
@@ -44,25 +44,31 @@ def try_decode_base64(content: str) -> str:
             pass
     return content
 
+def strip_domains(text: str) -> str:
+    """Убирает всё похожее на домен (слова с точкой внутри) перед проверкой"""
+    return re.sub(r'\S+\.\S+', '', text)
+
 def is_russian_server(name: str) -> bool:
-    """Проверка по целым словам. Telegram-канал в конце имени не учитывается."""
+    """Проверка по целым словам, игнорируя домены и Telegram-каналы в названии."""
     if not name:
         return False
 
     name = re.sub(r'TG:\s*@\S+', '', name, flags=re.IGNORECASE)
-    text = unquote(name).upper()
+    name = unquote(name)
+    text = strip_domains(name).upper()
 
     ru_patterns = [
         r'\bRU\b',
         r'\bRUSSIA\b',
+        r'\bRUSSIAN\b',
         r'\bРОССИЯ\b',
         r'\bРФ\b',
-        r'\bRUSSIAN\b',
         r'\bМОСКВА\b',
         r'\bПИТЕР\b',
         r'\bSPB\b',
         r'\bMSK\b',
         r'\bЕКБ\b',
+        '🇷🇺',
     ]
 
     for pattern in ru_patterns:
@@ -122,6 +128,19 @@ def tcp_test(link):
             time.sleep(0.5)
     return False
 
+def get_profile_name(link: str) -> str:
+    """Извлекает только название профиля (fragment после #) с декодированием"""
+    try:
+        parsed = urlparse(link)
+        name = parsed.fragment
+        if name:
+            return unquote(name)
+    except:
+        pass
+    if "#" in link:
+        return unquote(link.split("#", 1)[-1])
+    return ""
+
 def update_readme(ru_count: int, not_ru_count: int):
     """Обновляет статистику и дату в README.md"""
     readme_path = Path("README.md")
@@ -148,7 +167,6 @@ def update_readme(ru_count: int, not_ru_count: int):
         rf'\1`{total}`',
         text
     )
-
     text = re.sub(
         r'\*Последнее обновление:.*?\*',
         f'*Последнее обновление: {now}*',
@@ -178,7 +196,6 @@ def main():
                 all_links.update(valid)
                 print(f"  ✅ {len(valid)} ссылок")
 
-    # Дедупликация по uuid+host+port (как кнопка "удалить дубликаты" в vpn-клиенте)
     seen_keys = {}
     for link in all_links:
         key = dedup_key(link)
@@ -195,15 +212,14 @@ def main():
     for i, link in enumerate(unique_links):
         print(f"[{i+1}/{len(unique_links)}] Проверка...", end="\r")
         if tcp_test(link):
-            name_part = unquote(link.split("#")[-1]) if "#" in link else ""
-            if is_russian_server(name_part):
+            name = get_profile_name(link)
+            if is_russian_server(name):
                 ru_links.append(link)
             else:
                 not_ru_links.append(link)
 
     with open("subs/all_ru.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(ru_links))
-
     with open("subs/all_not_ru.txt", "w", encoding="utf-8") as f:
         f.write("\n".join(not_ru_links))
 

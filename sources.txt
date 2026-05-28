@@ -5,10 +5,8 @@ https://mifa.world/trojan
 https://mifa.world/vmess
 https://mifa.world/other
 
-https://github.com/ArtemAfonasyev/hentai-goida-subscription/raw/refs/heads/main/subscription.txt
-https://github.com/ArtemAfonasyev/hentai-goida-subscription/raw/refs/heads/main/subscription-ru.txt
-
 https://raw.githubusercontent.com/Maskkost93/kizyak-vpn-4.0/refs/heads/main/kizyakbeta6.txt
 https://raw.githubusercontent.com/Maskkost93/kizyak-vpn-4.0/refs/heads/main/kizyakbeta7.txt
 
 https://gitverse.ru/api/repos/flaafix/AetrisVPN_Black_list/raw/branch/master/configs.txt
+https://gitverse.ru/api/repos/flaafix/AetrisVPN/raw/branch/master/AetrisVPN.txt
