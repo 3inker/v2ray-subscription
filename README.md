@@ -14,9 +14,9 @@
 
 | Подписка | Количество | Ссылка |
 | --- | --- | --- |
-| **Все RU** | `19` | [all_ru.txt](https://raw.githubusercontent.com/3inker/v2ray-subscription/main/subs/all_ru.txt) |
-| **Все не RU** | `413` | [all_not_ru.txt](https://raw.githubusercontent.com/3inker/v2ray-subscription/main/subs/all_not_ru.txt) |
-| **Всего рабочих** | `432` | — |
+| **Все RU** | `15` | [all_ru.txt](https://raw.githubusercontent.com/3inker/v2ray-subscription/main/subs/all_ru.txt) |
+| **Все не RU** | `307` | [all_not_ru.txt](https://raw.githubusercontent.com/3inker/v2ray-subscription/main/subs/all_not_ru.txt) |
+| **Всего рабочих** | `322` | — |
 
 ---
 
@@ -55,4 +55,4 @@
 
 ---
 
-*Последнее обновление: 2026-07-17 13:49 UTC*
+*Последнее обновление: 2026-07-18 02:36 UTC*
