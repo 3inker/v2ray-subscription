@@ -1,3 +1,1 @@
-
-
 https://gitverse.ru/api/repos/flaafix/AetrisVPN_Black_list/raw/branch/master/configs.txt
