@@ -1,8 +1,3 @@
-https://mifa.world/vless
-https://mifa.world/hysteria
-https://mifa.world/ss
-https://mifa.world/trojan
-https://mifa.world/vmess
-https://mifa.world/other
+
 
 https://gitverse.ru/api/repos/flaafix/AetrisVPN_Black_list/raw/branch/master/configs.txt
