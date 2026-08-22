@@ -2,4 +2,6 @@ https://raw.githubusercontent.com/flaafix/AetrisVPN-black-list/refs/heads/main/c
 
 https://raw.githubusercontent.com/flaafix/AetrisVPN-white-list-lite/refs/heads/main/AetrisVPN.txt
 
-https://raw.githubusercontent.com/flaafix/AetrisVPN/refs/heads/main/AetrisVPN.txt
+https://cyb-portal.com/CP-002
+
+https://cyb-portal.com/CP-003
