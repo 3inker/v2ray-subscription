@@ -1,5 +1,7 @@
 https://raw.githubusercontent.com/flaafix/AetrisVPN-black-list/refs/heads/main/configs.txt
 
-https://cyb-portal.com/CP-002
+https://raw.githubusercontent.com/flaafix/AetrisVPN-white-list-lite/refs/heads/main/AetrisVPN.txt
 
-https://alley.serv00.net/other
+https://gitverse.ru/api/repos/Nokls/FlareFeed/raw/branch/main/public/fastest.txt
+
+https://sub.vlessfo.ru/vlessforu/working_configs.txt
